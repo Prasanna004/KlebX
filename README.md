@@ -1,137 +1,364 @@
 # KlebX
+### Genome-based machine learning for hypervirulence-associated marker detection in *Klebsiella pneumoniae*
 
-Predict **hypervirulent *Klebsiella pneumoniae*** (hvKp) from a genome FASTA.
+KlebX is a genome-based bioinformatics tool that predicts **hypervirulent *Klebsiella pneumoniae* (hvKp)-associated genomic signatures** from FASTA assemblies using a compact XGBoost classifier. It integrates BLASTN-based marker detection, SHAP-based model interpretation, and supplementary genomic characterisation to generate comprehensive, user-friendly reports.
 
-The tool BLASTs six genes whose mean absolute SHAP was at least 0.30 in the 12-gene model: `iucD`, `AlpA`, `aidA`, `iutA_2`, `dhbE`, and `iucC_2`. It scores a compact XGBoost model, writes a **SHAP waterfall**, and writes a **clear human-readable report** (`report.txt` + `report.md`).
+---
 
-The first `KlebX` command creates a conda environment named `hvkp-tools` and installs `blast`, `kleborate`, `mlst`, `abricate`, and `mash`, including their databases. NumPy, pandas, scikit-learn, XGBoost, SHAP, and the other model libraries are installed with pip, so conda does not solve the whole bioconda index for them. Every later command checks the programs, then scores the FASTA. A system copy already on `PATH` is not used in place of this environment.
+## Key Features
 
-| Binary | Conda package | What you get |
-|---|---|---|
-| `blastn` | `blast` | Six-gene marker search |
-| `kleborate` | `kleborate` | Species, ST, virulence score, K locus, acquired AMR |
-| `mlst` | `mlst` (Torsten Seemann) | Pasteur 7-gene ST |
-| `abricate` | `abricate` | NCBI, CARD, VFDB, PlasmidFinder |
+- **Machine-learning prediction:** Packaged XGBoost classifier using six genomic markers.
+- **Genome-based screening:** BLASTN detection of marker sequences from FASTA assemblies.
+- **Explainable predictions:** SHAP-based feature attribution and waterfall visualisation.
+- **Genomic characterisation:** Integration of Kleborate, MLST and ABRicate.
+- **Batch processing:** Analyse individual genomes or multiple FASTA files simultaneously.
+- **Automated setup:** Creates a dedicated Conda environment and installs required tools.
+- **Comprehensive outputs:** HTML dashboard, Excel workbooks, TSV files and human-readable reports.
+- **Reproducible workflow:** Packaged model, marker reference sequences and configuration files.
 
-## Install
+> **Important:** KlebX predicts agreement with a genomic classification framework. Its output is not a clinically calibrated probability of hypervirulence and does not replace clinical, epidemiological or experimental assessment.
 
-Conda or Mamba must already be installed. From a checkout:
+---
+
+## Installation
+
+### Prerequisites
+
+- Linux operating system
+- Conda or Mamba
+- Python and pip
+
+Clone the repository and navigate to the project directory:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/KlebX.git
+cd KlebX
+```
+
+Install KlebX:
 
 ```bash
 pip install -e .
+```
+
+### Automated environment setup
+
+The first execution of KlebX creates a dedicated Conda environment named `hvkp-tools` and installs the required genomic analysis tools and databases.
+
+```bash
+KlebX --tools
+```
+
+This installs and checks:
+
+| Tool | Purpose |
+|---|---|
+| BLAST+ (`blast`) | Marker sequence detection |
+| Kleborate | Species identification, sequence type, virulence and AMR characterisation |
+| MLST | Seven-locus sequence typing |
+| ABRicate | Screening against NCBI, CARD, VFDB and PlasmidFinder databases |
+
+Python dependencies, including NumPy, pandas, scikit-learn, XGBoost and SHAP, are installed within the dedicated environment.
+
+**Note:** You do not need to activate `hvkp-tools` manually. KlebX automatically executes within this environment.
+
+To prevent automatic installation:
+
+```bash
+KlebX --skip-setup
+```
+
+---
+
+## Usage
+
+### Single-genome prediction
+
+```bash
 KlebX -f genome.fasta -o hvkp_out
 ```
 
-`pip install -e .` installs the launcher into the current Python. The first `KlebX -f` command creates `hvkp-tools` if it is missing, installs KlebX into that environment, checks that BLAST, Kleborate, mlst, and ABRicate run, then scores the FASTA. Every later command does the same check and then scores. `KlebX --tools` only checks and installs, then exits. Pass `--skip-setup` to refuse the download.
-
-You do not need to activate `hvkp-tools`. The `KlebX` command switches into that environment itself.
-
-## Predict from a FASTA (single or batch)
+### Multiple genomes
 
 ```bash
-# single genome
-KlebX -f genome.fasta -o hvkp_out
-
-# batch: several files
 KlebX -f isolate1.fna isolate2.fna isolate3.fna -o hvkp_out
+```
 
-# batch: all FASTA/FA/FNA in a directory
+### Batch analysis of a directory
+
+```bash
 KlebX -d /path/to/genomes -o hvkp_out
+```
 
-# batch: paths listed in a text file (one per line)
+### Batch analysis using a file list
+
+Provide a text file containing one FASTA path per line:
+
+```bash
 KlebX --list genomes.txt -o hvkp_out
+```
 
-# quiet (still writes files; no full report on stdout)
+### Quiet mode
+
+```bash
 KlebX -d /path/to/genomes -o hvkp_out --quiet
+```
 
-# 8 genomes at once, 4 BLASTN threads inside each genome
+### Parallel processing
+
+```bash
 KlebX -d /path/to/genomes -o hvkp_out -j 8 -t 4 --quiet
 ```
 
-`-t` / `--threads` is the BLASTN thread count for one genome (default 4). `-j` / `--jobs` is how many genomes run at the same time (default 1). Each job also runs Kleborate, mlst and ABRicate when those tools are installed.
+| Parameter | Description | Default |
+|---|---|---|
+| `-f` | Input FASTA file(s) | — |
+| `-d` | Input directory | — |
+| `--list` | Text file containing FASTA paths | — |
+| `-o` | Output directory | — |
+| `-t`, `--threads` | BLASTN threads per genome | 4 |
+| `-j`, `--jobs` | Number of genomes processed simultaneously | 1 |
+| `--quiet` | Suppress detailed terminal reports | False |
+| `--tools` | Install and check required tools | — |
+| `--skip-setup` | Disable automated environment setup | False |
 
-### Primary Excel report
+---
 
-| File | Content |
+## Prediction Workflow
+
+KlebX follows an integrated genome-screening and machine-learning workflow:
+
+1. **Marker detection:** BLASTN searches input genome assemblies against reference sequences in `data/markers.fna`.
+2. **Marker identification:** Hits are evaluated using nucleotide identity and subject coverage thresholds.
+3. **Feature encoding:** Detected markers are converted into a binary presence/absence vector.
+4. **Machine-learning prediction:** The six-marker vector is supplied to the packaged XGBoost classifier.
+5. **Model interpretation:** SHAP calculates feature-level contributions and generates a waterfall plot.
+6. **Supplementary analysis:** Kleborate, MLST and ABRicate characterise additional genomic features.
+7. **Report generation:** Results are exported as structured data, human-readable reports and interactive visualisations.
+
+### Marker detection thresholds
+
+| Parameter | Threshold |
 |---|---|
-| **`report.xlsx`** (per sample) | **`Consolidated`** sheet first: bold category headers (Markers / MLST / Kleborate_virulence / Kleborate_AMR / ABRicate_ncbi / card / vfdb / plasmidfinder) with gene sub-columns and **1 = present, 0 = absent**. Detail sheets: Markers, SHAP, MLST, Kleborate, ABRicate_*. No Summary/Notes sheets. |
-| **`all_samples.xlsx`** (batch root) | Same **Consolidated** 1/0 matrix with **one row per isolate** (union of all genes in the batch) + **Calls** sheet |
-| **`consolidated_presence.tsv`** | Tab-delimited copy of the Consolidated matrix |
-| **`report.txt` / `report.md`** | Human-readable text / Markdown report |
-| **`KlebX.html`** (batch root) | Interactive KlebX report for the FASTA files in this run. |
-| **`KlebX.xlsx`** | Same run, as tables |
+| General nucleotide identity | ≥80% |
+| Subject-sequence coverage | ≥60% |
+| *iucD* nucleotide identity | ≥75% |
 
-The full report is also printed to the terminal unless you pass `--quiet`.
+The relaxed *iucD* threshold accommodates sequence variation between aerobactin-associated lineages represented in the reference data.
 
-### Other outputs (per sample, under `hvkp_out/<stem>/`)
+---
 
-| File | Content |
+## Machine-Learning Model
+
+The packaged classifier uses six binary genomic features:
+
+| Marker | Description |
 |---|---|
-| `summary.tsv` | One-line summary (P, call, markers, ST, virulence score, aerobactin, K locus) |
-| `prediction.json` | Full machine-readable record including SHAP values |
-| `marker_calls.tsv` | Per-gene BLAST identity / coverage |
-| `shap_waterfall.png` | SHAP explanation of this genome |
-| `kleborate.tsv` | Kleborate table (if installed) |
-| `mlst.txt` | Seemann mlst (if installed) |
-| `abricate_*.tsv` | ABRicate DBs (if installed) |
+| `iucD` | Aerobactin-associated marker |
+| `AlpA` | Representative-sequence-derived annotation |
+| `aidA` | Associated genomic marker |
+| `iutA_2` | Aerobactin-associated marker |
+| `dhbE` | Composite Panaroo cluster-derived feature |
+| `iucC_2` | Aerobactin-associated marker |
 
-`hvkp_out/all_samples.tsv` concatenates one row per genome (with path to each `report.txt`).
+The model is stored in `data/hv_xgb.joblib`, with feature ordering and configuration specified in `data/model_meta.json`.
 
-### Example report header
+### Classification categories
 
+| Predicted category | Probability threshold |
+|---|---|
+| High hvKp-like | P ≥ 0.8 |
+| Moderate hvKp-like | 0.5 ≤ P < 0.8 |
+| Equivocal | 0.2 ≤ P < 0.5 |
+| Non-hvKp-like | P < 0.2 |
+
+These categories are software-defined reporting thresholds and are **not clinically calibrated probability estimates**.
+
+### Model performance
+
+On the held-out test dataset:
+
+| Metric | Performance |
+|---|---:|
+| AUROC | 0.9998 |
+| Sensitivity | 98.7% |
+| Specificity | 100.0% |
+| True positives | 295 |
+| False positives | 0 |
+| True negatives | 781 |
+| False negatives | 4 |
+
+The six-marker classifier demonstrated performance comparable to the original 12-marker classification model within the study dataset.
+
+### SHAP interpretation
+
+Mean absolute SHAP values for the six-marker model:
+
+| Feature | Mean absolute SHAP |
+|---|---:|
+| `iucD` | 4.25 |
+| `aidA` | 1.59 |
+| `AlpA` | 1.51 |
+| `dhbE` | 0.91 |
+| `iutA_2` | 0.49 |
+| `iucC_2` | 0.27 |
+
+SHAP values represent contributions to model predictions and should not be interpreted as causal biological effects.
+
+**Annotation note:** `dhbE` corresponds to the composite Panaroo cluster `pchD~~~acs_6~~~dhbE`, not a confirmed standalone gene. The `AlpA` annotation is based on representative-sequence similarity.
+
+---
+
+## Output Files
+
+### Primary reports
+
+| File | Description |
+|---|---|
+| `report.xlsx` | Per-sample Excel workbook containing consolidated marker and genomic characterisation results |
+| `all_samples.xlsx` | Batch-level consolidated presence/absence matrix and prediction calls |
+| `consolidated_presence.tsv` | Tab-delimited consolidated genomic feature matrix |
+| `report.txt` | Human-readable prediction report |
+| `report.md` | Markdown-formatted prediction report |
+| `KlebX.html` | Interactive batch-level HTML dashboard |
+| `KlebX.xlsx` | Batch-level Excel report |
+
+### Per-sample outputs
+
+Each sample is analysed in a separate directory:
+
+```text
+hvkp_out/
+├── all_samples.tsv
+├── all_samples.xlsx
+├├── KlebX.html
+├── KlebX.xlsx
+└── sample_name/
+    ├── summary.tsv
+    ├── prediction.json
+    ├── marker_calls.tsv
+    ├── shap_waterfall.png
+    ├── report.txt
+    ├── report.md
+    ├── kleborate.tsv
+    ├── mlst.txt
+    └── abricate_*.tsv
 ```
-==============================================================================
-KlebX report
-==============================================================================
-Sample:          ERR10471622.fasta
-Call:            hvKp-like (high)
-P(hvKp):         0.9960
-Markers present: 5 / 6
-ST (best):       231
-...
-```
 
-### How the ML call is made
+| File | Description |
+|---|---|
+| `summary.tsv` | Prediction summary, probability, markers, ST and genomic characteristics |
+| `prediction.json` | Machine-readable prediction and SHAP information |
+| `marker_calls.tsv` | BLASTN identity, coverage and marker detection results |
+| `shap_waterfall.png` | SHAP waterfall visualisation |
+| `kleborate.tsv` | Kleborate output |
+| `mlst.txt` | Sequence typing results |
+| `abricate_*.tsv` | Database-specific ABRicate screening results |
 
-1. `blastn` vs `KlebX/data/markers.fna` (one representative CDS per Panaroo cluster).
-2. A marker is **present** if identity ≥ 80% and subject coverage ≥ 60%. `iucD` is called at ≥ 75% so both aerobactin lineages are detected: iuc 1 (classic ST23) and iuc 5 (the reference CDS) share about 79% nucleotide identity.
-3. XGBoost on the six markers returns P(hvKp).
-4. SHAP attributes that probability to each marker.
-5. A human-readable **`report.txt` / `report.md`** is written with MLST, Kleborate and ABRicate sections.
+### Consolidated Excel matrix
 
-Calls: `hvKp-like (high)` P≥0.8 · `hvKp-like (moderate)` P≥0.5 · `equivocal` P≥0.2 · `non-hvKp-like` otherwise.
+The `Consolidated` worksheet contains genomic feature categories, including:
 
-On the study held-out set this six-gene model matches the 12-gene classification: AUROC 0.9998, sensitivity 0.987 and specificity 1.000 (295 true positives, 0 false positives, 4 false negatives). Refit SHAP is `iucD` 4.25, `aidA` 1.59, `AlpA` 1.51, `dhbE` 0.91, `iutA_2` 0.49, `iucC_2` 0.27. **`iucD` alone has AUROC 0.977**, sensitivity 1.000 and 36 false positives.
+- Markers
+- MLST
+- Kleborate virulence
+- Kleborate AMR
+- ABRicate NCBI
+- CARD
+- VFDB
+- PlasmidFinder
 
-### Self-check
+Feature columns use binary encoding:
+
+- `1` — Present
+- `0` — Absent
+
+The batch-level workbook contains one row per isolate and a separate `Calls` worksheet.
+
+---
+
+## Self-test
+
+Run the packaged marker sequences as a test input:
 
 ```bash
 KlebX -f KlebX/data/markers.fna -o hvkp_out_selftest --quiet
-# expect: markers present and Call hvKp-like (high)
 ```
 
-## Marker genes
+The test should identify marker sequences and return a high hvKp-like prediction.
 
-`iucD`, `AlpA`, `aidA`, `iutA_2`, `dhbE`, `iucC_2`
+---
 
-`ccmM_1`, `vapC_1`, `iucA_1`, `vap`, `def_4`, and `iucB` are not scored. Held-out AUROC is 0.9998, the same as the 12-gene model. The `dhbE` marker is the representative sequence from the Panaroo cluster `pchD~~~acs_6~~~dhbE`. Prokka calls that sequence `dhbE`, a 2,3-dihydroxybenzoate-AMP ligase. It is not a verified pyochelin `pchD` gene.
+## Repository Structure
 
-## Repository layout
-
-```
+```text
 KlebX/
-  README.md
-  KlebX/                 # Python package + marker DB + model
-  manuscript/
-    manuscript.md / .docx
-    tables/  figures/
-  examples/
+├── README.md
+├── KlebX/
+│   ├── __init__.py
+│   ├── __main__.py
+│   ├── bootstrap.py
+│   ├── predict.py
+│   ├── surveillance_report.py
+│   └── data/
+│       ├── hv_xgb.joblib
+│       ├── markers.fna
+│       ├── markers.tsv
+│       ├── model_meta.json
+│       └── README.md
+├── examples/
+└── manuscript/
 ```
+
+---
+
+## Scientific Background
+
+KlebX was developed using a pangenome-based analysis of 3,600 *K. pneumoniae* genomes, comprising 997 hvKp-labelled and 2,603 cKp-labelled isolates.
+
+The development workflow integrated:
+
+- Panaroo-based pangenome reconstruction
+- Population-structure assessment
+- PCA-based residualised gene association analysis
+- Scoary-based association screening
+- Sequence-based annotation of candidate genomic features
+- Comparative evaluation of seven machine-learning classifiers
+- SHAP-based feature interpretation
+- Compact-marker selection and model implementation
+
+The six-marker classifier was packaged to enable genome-level screening without requiring users to reconstruct the complete pangenome.
+
+---
+
+## Limitations
+
+- Predictions reflect agreement with the genomic classification used during model development.
+- The probability categories are not clinically calibrated.
+- Independent clinical and experimental validation is required.
+- Population structure and relatedness may influence genomic associations.
+- Some marker annotations are cluster-derived and require further validation.
+
+KlebX is intended for **genomic research, comparative genomics and exploratory surveillance**, not as a standalone clinical diagnostic system.
+
+---
 
 ## Citation
 
-See `manuscript/manuscript.md`. Analysis: Panaroo pangenome of 3,600 isolates, Scoary and PC-corrected GWAS, seven classifiers (logistic regression, linear SVM, random forest, extra trees, histogram gradient boosting, LightGBM, XGBoost) plus SHAP. BLAST names for unnamed clusters required at least 80% protein identity. The FASTA tool scores the six-gene XGBoost model. Kleborate `iuc 5` is an aerobactin lineage, not a marker count.
+If you use KlebX in your research, please cite the associated manuscript:
+
+> Prasanna Selvam, et al. *KlebX: A Genome-Based Machine-Learning Framework for Hypervirulence-Associated Marker Detection in Klebsiella pneumoniae.* [Manuscript details to be updated upon publication.]
+
+The manuscript and supplementary materials will be made available through this repository.
+
+---
 
 ## License
 
-MIT
+This project is distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgements
+
+We acknowledge the developers and maintainers of BLAST+, Panaroo, Kleborate, MLST, ABRicate, XGBoost and SHAP, whose open-source tools support the KlebX workflow.
