@@ -1,0 +1,7 @@
+feature,gene,annotation,isolate,locus,length,row_index
+iucD,iucD~~~iucD_1~~~iucD_2,NADPH-dependent L-lysine N(6)-monooxygenase IucD;L-lysine N6-monooxygenase;hypothetical protein,ERR10471622,BIJLFMDJ_05147,1278,4828
+AlpA,group_8218,AlpA family transcriptional regulator,ERR10471622,BIJLFMDJ_03925,186,4413
+aidA,aidA,hypothetical protein;Quorum-quenching protein AidA,ERR10471680,KDKNOABD_04385,861,5065
+iutA_2,iutA_2~~~iutA_10~~~iutA_9~~~iutA_3~~~iutA_7~~~iutA_8~~~iutA_6~~~iutA_4~~~iutA_5,ferric aerobactin receptor IutA;Ferric aerobactin receptor;hypothetical protein,ERR10471622,BIJLFMDJ_05148,2202,4831
+dhbE,pchD~~~acs_6~~~dhbE,hypothetical protein;Pyochelin synthase PchD;Acetyl-coenzyme A synthetase;23-dihydroxybenzoate-AMP ligase,ERR10471622,BIJLFMDJ_03928,1578,4394
+iucC_2,iucC_2~~~iucC_1~~~iucC_3~~~iucC,Aerobactin synthase;NIS family aerobactin synthetase IucC,ERR10471680,KDKNOABD_04415,1734,5014

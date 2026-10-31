@@ -1,0 +1,29 @@
+{
+  "n_features": 6,
+  "features": [
+    "iucD",
+    "AlpA",
+    "aidA",
+    "iutA_2",
+    "dhbE",
+    "iucC_2"
+  ],
+  "test_auroc": 0.9998030138875209,
+  "test_sens": 0.9866220735785953,
+  "test_spec": 1.0,
+  "threshold": 0.5,
+  "tp": 295,
+  "fp": 0,
+  "tn": 781,
+  "fn": 4,
+  "blast_min_pident": 80.0,
+  "blast_min_qcov": 60.0,
+  "shap_mean_abs_test": {
+    "iucD": 4.251437664031982,
+    "AlpA": 1.5086840391159058,
+    "aidA": 1.5886934995651245,
+    "iutA_2": 0.48731422424316406,
+    "iucC_2": 0.2704356014728546,
+    "dhbE": 0.9105143547058105
+  }
+}
