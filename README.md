@@ -31,7 +31,7 @@ KlebX is a genome-based bioinformatics tool that predicts **hypervirulent *Klebs
 Clone the repository and navigate to the project directory:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/KlebX.git
+git clone https://github.com/Prasanna004/KlebX.git
 cd KlebX
 ```
 
